@@ -21,10 +21,15 @@ import (
 )
 
 func main() {
+	// Defaults (Query ranges for a day)
+	var now = time.Now()
+	var now3339 = now.Format(time.RFC3339)
+	var now3339DayBack = now.Add(-24 * time.Hour).Format(time.RFC3339)
+
 	// Flags
 	var addr = flag.String("addr", "", "address")
-	var startTime = flag.String("start_time", "", "start time")
-	var endTime = flag.String("end_time", "", "end time")
+	var startTime = flag.String("start_time", now3339DayBack, "start time (current_time - 24h)")
+	var endTime = flag.String("end_time", now3339, "end time (current_time)")
 	var stepPeriod = flag.String("step", "10", "step period (in minutes)")
 	flag.Parse()
 
@@ -73,15 +78,16 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Warning: %v\n", warnings)
 	}
 
-	// Set range
-	r := v1.Range{
-		Start: st,
-		End:   et,
-		Step:  time.Duration(sp) * time.Minute,
-	}
-
-	var name string
-	var result model.Value
+	var (
+		// Set range
+		r = v1.Range{
+			Start: st,
+			End:   et,
+			Step:  time.Duration(sp) * time.Minute,
+		}
+		name   string
+		result model.Value
+	)
 
 	// Loop through metric name(s)
 	for _, mlv := range mlvs {

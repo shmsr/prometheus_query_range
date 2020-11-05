@@ -20,6 +20,15 @@ import (
 	"github.com/prometheus/common/model"
 )
 
+// Exit error codes
+const (
+	ErrClient          = 1
+	ErrParseStartTime  = 2
+	ErrParseEndTime    = 3
+	ErrParseStepPeriod = 4
+	ErrFetchMetricName = 5
+)
+
 func main() {
 	// Defaults (Query ranges for a day)
 	var now = time.Now()
@@ -40,27 +49,27 @@ func main() {
 	client, err := api.NewClient(api.Config{Address: *addr})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating client: %v\n", err)
-		os.Exit(1)
+		os.Exit(ErrClient)
 	}
 
 	// Parse start_time
 	st, err := time.Parse(time.RFC3339, *startTime)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing start_time: %v\n", err)
-		os.Exit(1)
+		os.Exit(ErrParseStartTime)
 	}
 	// Parse end_time
 	et, err := time.Parse(time.RFC3339, *endTime)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing end_time: %v\n", err)
-		os.Exit(1)
+		os.Exit(ErrParseEndTime)
 	}
 
 	// Step Period
 	sp, err := strconv.ParseInt(*stepPeriod, 10, 64)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing step: %v\n", err)
-		os.Exit(1)
+		os.Exit(ErrParseStepPeriod)
 	}
 
 	// Wrap the API
@@ -73,6 +82,7 @@ func main() {
 	mlvs, warnings, err := v1api.LabelValues(ctx, "__name__", st, et)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching metric name(s): %v\n", err)
+		os.Exit(ErrFetchMetricName)
 	}
 	if len(warnings) > 0 {
 		fmt.Fprintf(os.Stderr, "Warning: %v\n", warnings)

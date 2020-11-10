@@ -1,28 +1,28 @@
 prometheus_query_range
----
+======================
 Prometheus API doesn't give a direct way to get all the metrics for a particular time
 range. So, here's `prometheus_query_range` for you!
 
 Installation
----
-go get -u github.com/shmsr/prometheus_query_range/...
+============
+    $ go get -u github.com/shmsr/prometheus_query_range/...
 
 (or)
 
-git clone git@github.com:shmsr/prometheus_query_range.git
-go build
+    $ git clone git@github.com:shmsr/prometheus_query_range.git
+    $ go build
 
 Note: `go get` will place the build at $GOPATH/bin
 
 Usage
----
-./prometheus_query_range --addr="<address-to-prometheus-server>" --start_time="2020-10-28T20:10:30Z" --end_time="2020-11-04T20:11:00Z" --step=10
+=====
+    $ ./prometheus_query_range --addr="<address-to-prometheus-server>" --start_time="2020-10-28T20:10:30Z" --end_time="2020-11-04T20:11:00Z" --step=10
 
-The --start_time and --end_time accepts RFC3339 time format.
+Note: The --start_time and --end_time accepts RFC3339 time format.
 
 Help
----
-./prometheus_query_range --help
+====
+    $ ./prometheus_query_range --help
 
 Usage of ./prometheus_query_range:
   -addr string

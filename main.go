@@ -20,26 +20,28 @@ import (
 	"github.com/prometheus/common/model"
 )
 
-// Exit error codes
+// Exit error code(s)
 const (
-	ErrClient          = 1
-	ErrParseStartTime  = 2
-	ErrParseEndTime    = 3
-	ErrParseStepPeriod = 4
-	ErrFetchMetricName = 5
+	ErrorClient          = 1
+	ErrorParseStartTime  = 2
+	ErrorParseEndTime    = 3
+	ErrorParseStepPeriod = 4
+	ErrorFetchMetricName = 5
 )
 
 func main() {
 	// Defaults (Query ranges for a day)
-	var now = time.Now()
-	var now3339 = now.Format(time.RFC3339)
-	var now3339DayBack = now.Add(-24 * time.Hour).Format(time.RFC3339)
+	now := time.Now()
+	now3339 := now.Format(time.RFC3339)
+	now3339DayBack := now.Add(-24 * time.Hour).Format(time.RFC3339)
 
 	// Flags
-	var addr = flag.String("addr", "", "address")
-	var startTime = flag.String("start_time", now3339DayBack, "start time (current_time - 24h)")
-	var endTime = flag.String("end_time", now3339, "end time (current_time)")
-	var stepPeriod = flag.String("step", "10", "step period (in minutes)")
+	var (
+		addr       = flag.String("addr", "", "address")
+		startTime  = flag.String("start_time", now3339DayBack, "start time (current_time - 24h)")
+		endTime    = flag.String("end_time", now3339, "end time (current_time)")
+		stepPeriod = flag.String("step", "10", "step period (in minutes)")
+	)
 	flag.Parse()
 
 	// Set flags for logger
@@ -48,72 +50,68 @@ func main() {
 	// Get an new client
 	client, err := api.NewClient(api.Config{Address: *addr})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating client: %v\n", err)
-		os.Exit(ErrClient)
+		fmt.Fprintln(os.Stderr, "Error creating client: ", err)
+		os.Exit(ErrorClient)
 	}
 
 	// Parse start_time
 	st, err := time.Parse(time.RFC3339, *startTime)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing start_time: %v\n", err)
-		os.Exit(ErrParseStartTime)
+		fmt.Fprintln(os.Stderr, "Error parsing start_time: ", err)
+		os.Exit(ErrorParseStartTime)
 	}
 	// Parse end_time
 	et, err := time.Parse(time.RFC3339, *endTime)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing end_time: %v\n", err)
-		os.Exit(ErrParseEndTime)
+		fmt.Fprintln(os.Stderr, "Error parsing end_time: ", err)
+		os.Exit(ErrorParseEndTime)
 	}
 
 	// Step Period
 	sp, err := strconv.ParseInt(*stepPeriod, 10, 64)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing step: %v\n", err)
-		os.Exit(ErrParseStepPeriod)
+		fmt.Fprintln(os.Stderr, "Error parsing step: ", err)
+		os.Exit(ErrorParseStepPeriod)
 	}
 
 	// Wrap the API
-	var v1api = v1.NewAPI(client)
-
-	// Don't do anything; for now keep it TODO
-	var ctx = context.TODO()
+	v1api := v1.NewAPI(client)
 
 	// Get all metric_names using `__name__` reserved label
-	mlvs, warnings, err := v1api.LabelValues(ctx, "__name__", st, et)
+	mlvs, warnings, err := v1api.LabelValues(context.TODO(), "__name__", st, et)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error fetching metric name(s): %v\n", err)
-		os.Exit(ErrFetchMetricName)
+		fmt.Fprintln(os.Stderr, "Error fetching metric name(s): ", err)
+		os.Exit(ErrorFetchMetricName)
 	}
 	if len(warnings) > 0 {
-		fmt.Fprintf(os.Stderr, "Warning: %v\n", warnings)
+		fmt.Fprintln(os.Stderr, "Warning: ", warnings)
 	}
 
-	var (
-		// Set range
-		r = v1.Range{
-			Start: st,
-			End:   et,
-			Step:  time.Duration(sp) * time.Minute,
-		}
-		name   string
-		result model.Value
-	)
+	// Set range
+	r := v1.Range{
+		Start: st,
+		End:   et,
+		Step:  time.Duration(sp) * time.Minute,
+	}
+
+	var name string
+	var result model.Value
 
 	// Loop through metric name(s)
 	for _, mlv := range mlvs {
 		name = string(mlv)
 		// Do a range query
-		result, warnings, err = v1api.QueryRange(ctx, name, r)
+		result, warnings, err = v1api.QueryRange(context.TODO(), name, r)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error while quering range: %v\n", err)
+			fmt.Fprintln(os.Stderr, "Error while quering range: ", err)
 			continue
 		}
 		if len(warnings) > 0 {
-			fmt.Fprintf(os.Stderr, "Warning: %v\n", warnings)
+			fmt.Fprintln(os.Stderr, "Warning: ", warnings)
 		}
 		// Encode the result to JSON format using the internal Marshaler
 		if err = json.NewEncoder(os.Stdout).Encode(result); err != nil {
-			fmt.Fprintf(os.Stderr, "Error while forming JSON: %v\n", err)
+			fmt.Fprintln(os.Stderr, "Error while forming JSON: ", err)
 		}
 	}
 }
